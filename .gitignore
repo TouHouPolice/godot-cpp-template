@@ -60,3 +60,10 @@ compile_commands.json
 # Cmake
 cmake-build*
 CMakeUserPresets.json
+
+out/*
+.vs/*
+build/*
+bin/**/*.dll
+*.ilk
+!*.gdextension
