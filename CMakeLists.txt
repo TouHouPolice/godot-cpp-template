@@ -13,6 +13,7 @@ project(godot-cpp-template
     LANGUAGES CXX
 )
 
+
 set(LIBNAME "MySample" CACHE STRING "The name of the library")
 set(GODOT_PROJECT_DIR "demo" CACHE STRING "The directory of a Godot project folder")
 
@@ -77,8 +78,39 @@ set_target_properties(${LIBNAME}
     OUTPUT_NAME "${LIBNAME}${GODOTCPP_SUFFIX}"
 )
 
+if(MSVC)
+    set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY VS_STARTUP_PROJECT ${LIBNAME})
+    # 1. Define a variable for the Godot Executable so it can be set via command line or GUI
+    set(GODOT_EXECUTABLE "godot" CACHE FILEPATH "Path to the Godot executable")
+    # 2. Tell CMake to configure the Visual Studio Debugger settings
+    # Note: We use file(TO_NATIVE_PATH) to ensure Windows backslashes are used
+    file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${GODOT_PROJECT_DIR}" GODOT_PROJECT_NATIVE_PATH)
+    
+    set_target_properties(${LIBNAME} PROPERTIES
+        # Point the debugger to Godot
+        VS_DEBUGGER_COMMAND "${GODOT_EXECUTABLE}"
+        
+        # Pass the path to your demo project
+        # without -e to debug the scene window, with -e to debug the editor
+        VS_DEBUGGER_COMMAND_ARGUMENTS "--path \"${GODOT_PROJECT_NATIVE_PATH}\" "
+        
+        # Set working directory to the project root
+        VS_DEBUGGER_WORKING_DIRECTORY "${GODOT_PROJECT_NATIVE_PATH}"
+        
+        # Ensure the environment matches what Godot needs (optional)
+        # VS_DEBUGGER_ENVIRONMENT "PATH=${GODOT_PROJECT_NATIVE_PATH}/bin;%PATH%"
+    )
+endif()
+
 set(GODOT_PROJECT_BINARY_DIR "${PROJECT_SOURCE_DIR}/${GODOT_PROJECT_DIR}/bin/${GODOTCPP_PLATFORM}")
 
 add_custom_command(TARGET ${LIBNAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${LIBNAME}>" "${GODOT_PROJECT_BINARY_DIR}/$<TARGET_FILE_NAME:${LIBNAME}>"
 )
+
+# NEW COMMAND (Copies the PDB - crucial for debugging)
+if(MSVC)
+    add_custom_command(TARGET ${LIBNAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_PDB_FILE:${LIBNAME}>" "${GODOT_PROJECT_BINARY_DIR}/$<TARGET_PDB_FILE_NAME:${LIBNAME}>"
+    )
+endif()
